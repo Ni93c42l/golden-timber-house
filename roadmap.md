@@ -17,3 +17,5 @@
 - [x] Hausalter (0–2026, ganze Jahre), Verglasung und Bewohnerzahl ohne Einfluss auf die Hausdarstellung ergänzen und prüfen.
 - [x] Ergebnisansicht mit unveränderter Innenkonfiguration und ohne Haus-Auswahloptionen ergänzen.
 - [x] Serverrack-Angebot mit direkt editierbaren Beispielwerten für Grösse, Wärmedeckung und Preis gestalten und auf Desktop/Handy prüfen.
+- [x] Verglasung sichtbar über Scheibenfarbe und Rahmentiefe unterscheiden; nach Änderungen zusätzliche Fensterläden öffnen.
+- [x] Verglasungswechsel, Innen-/Ergebnisansicht und unveränderte Alters-/Bewohnerangaben prüfen.

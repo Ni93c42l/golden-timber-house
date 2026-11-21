@@ -7,6 +7,8 @@ import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2, Clip
 import { Button } from '@/components/ui/button';
 import HouseDetails from '@/components/HouseDetails';
 import RackOffer from '@/components/RackOffer';
+import { WindowGlazingContext, useWindowGlazing, type GlazingPalette, type GlazingSelection } from '@/components/WindowGlazing';
+import { windowKindForGlazing, type WindowKind } from '@/lib/house-details';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
 import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, facadeOpacity, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
@@ -70,27 +72,31 @@ function Shutter({ x, y, w, h, louvre }: { x: number; y: number; w: number; h: n
   );
 }
 
-type Win = "closedPanel" | "closedLouvre" | "openLouvre" | "openPanel";
-function Window({ x, y, kind, w = 1.25, h = 1.9 }: { x: number; y: number; kind: Win; w?: number; h?: number }) {
-  const louvre = kind === "closedLouvre" || kind === "openLouvre";
-  const open = kind === "openLouvre" || kind === "openPanel";
+type Win = WindowKind;
+function Window({ x, y, kind, w = 1.25, h = 1.9, reveal = false }: { x: number; y: number; kind: Win; w?: number; h?: number; reveal?: boolean }) {
+  const glazing = useWindowGlazing();
+  const visibleKind = windowKindForGlazing(kind, glazing.changed, reveal);
+  const louvre = visibleKind === "closedLouvre" || visibleKind === "openLouvre";
+  const open = visibleKind === "openLouvre" || visibleKind === "openPanel";
+  const trim = glazing.frameWidth;
+  const depth = glazing.frameDepth;
   return (
-    <group>
+    <group name={`Fenster-${x}-${y}`} userData={{ glazing: glazing.id, open, frameWidth: trim, frameDepth: depth }}>
       {/* Ocker-Gewände */}
       <Box p={[x, y, 0.02]} s={[w + 0.36, h + 0.36, 0.06]} c={C.ochre} />
       <Box p={[x, y - h / 2 - 0.22, 0.1]} s={[w + 0.55, 0.1, 0.2]} c={C.ochre} />
       <Box p={[x, y + h / 2 + 0.25, 0.08]} s={[w + 0.5, 0.12, 0.14]} c={C.ochre} />
       {/* Glas und Sprossen */}
-      <Box p={[x, y, 0.04]} s={[w, h, 0.04]} c={C.glass} r={0.2} />
+      <Box p={[x, y, 0.04]} s={[w, h, 0.04]} c={glazing.glass} r={glazing.roughness} />
       <group position={[0, 0, 0.07]}>
-        <Box p={[x, y, 0]} s={[0.06, h, 0.04]} c={C.frame} />
-        <Box p={[x, y + h * 0.18, 0]} s={[w, 0.06, 0.04]} c={C.frame} />
-        {[-1, 1].map((s) => <Box key={s} p={[x + (s * w) / 2, y, 0]} s={[0.07, h, 0.05]} c={C.frame} />)}
-        {[-1, 1].map((s) => <Box key={"h" + s} p={[x, y + (s * h) / 2, 0]} s={[w, 0.07, 0.05]} c={C.frame} />)}
+        <Box p={[x, y, 0]} s={[glazing.changed ? trim * 0.85 : 0.06, h, glazing.changed ? depth : 0.04]} c={glazing.frame} />
+        <Box p={[x, y + h * 0.18, 0]} s={[w, glazing.changed ? trim * 0.85 : 0.06, glazing.changed ? depth : 0.04]} c={glazing.frame} />
+        {[-1, 1].map((s) => <Box key={s} p={[x + (s * w) / 2, y, 0]} s={[trim, h, depth]} c={glazing.frame} />)}
+        {[-1, 1].map((s) => <Box key={"h" + s} p={[x, y + (s * h) / 2, 0]} s={[w, trim, depth]} c={glazing.frame} />)}
       </group>
       {open
         ? [-1, 1].map((s) => <group key={s} position={[0, 0, 0.08]}><Shutter x={x + s * (w / 2 + 0.2 + w / 4)} y={y} w={w / 2} h={h + 0.05} louvre={louvre} /></group>)
-        : [-1, 1].map((s) => <group key={s} position={[0, 0, 0.1]}><Shutter x={x + (s * w) / 4} y={y} w={w / 2 - 0.01} h={h} louvre={louvre} /></group>)}
+        : [-1, 1].map((s) => <group key={s} position={[0, 0, glazing.changed ? 0.12 + depth / 2 : 0.1]}><Shutter x={x + (s * w) / 4} y={y} w={w / 2 - 0.01} h={h} louvre={louvre} /></group>)}
     </group>
   );
 }
@@ -146,6 +152,7 @@ function Roof() {
 
 // Gauben: aussen klein mit Bogen, Mitte gross mit Dreiecksgiebel
 function Dormer({ x, big }: { x: number; big?: boolean }) {
+  const glazing = useWindowGlazing();
   const z = FZ - 0.7, yBase = TOP + 0.35 + ROOF * (1 - z / (D / 2));
   const w = big ? 1.4 : 0.85, h = big ? 1.2 : 0.75, dep = 1.9;
   const cap = useMemo(() => {
@@ -164,8 +171,8 @@ function Dormer({ x, big }: { x: number; big?: boolean }) {
   return (
     <group position={[x, yBase, z]}>
       <Box p={[0, h / 2 - 0.2, -dep / 2 + 0.05]} s={[w, h, dep]} c={C.ochre} />
-      <Box p={[0, h / 2 - 0.15, 0.07]} s={[w - 0.3, h - 0.25, 0.04]} c={C.glass} r={0.2} />
-      <Box p={[0, h / 2 - 0.15, 0.09]} s={[0.04, h - 0.25, 0.03]} c={C.frame} />
+      <Box p={[0, h / 2 - 0.15, 0.07]} s={[w - 0.3, h - 0.25, 0.04]} c={glazing.glass} r={glazing.roughness} />
+      <Box p={[0, h / 2 - 0.15, 0.09]} s={[glazing.changed ? glazing.frameWidth * 0.65 : 0.04, h - 0.25, glazing.changed ? glazing.frameDepth : 0.03]} c={glazing.frame} />
       <mesh geometry={cap} position={[0, h - 0.2, -dep + 0.2]} castShadow>
         <meshStandardMaterial color={big ? C.roof : C.ochre} roughness={0.7} />
       </mesh>
@@ -222,19 +229,19 @@ function House() {
       <Box p={[0, TOP + 0.25, FZ + 0.2]} s={[W + 0.5, 0.18, 0.3]} c={C.ochreDark} />
       <Box p={[0, TOP + 0.05, -FZ - 0.1]} s={[W + 0.3, 0.3, 0.22]} c={C.ochre} />
       <group position={[0, 0, FZ + 0.01]}>
-        {ground.map((k, i) => k === "door" ? <Door key={i} x={BAYS[i] ?? 0} /> : <Window key={i} x={BAYS[i] ?? 0} y={y1} kind={k} h={2.0} />)}
-        {upper.map((k, i) => <Window key={"u" + i} x={BAYS[i] ?? 0} y={y2} kind={k} h={1.75} />)}
+        {ground.map((k, i) => k === "door" ? <Door key={i} x={BAYS[i] ?? 0} /> : <Window key={i} x={BAYS[i] ?? 0} y={y1} kind={k} h={2.0} reveal={i === 0 || i === 4} />)}
+        {upper.map((k, i) => <Window key={"u" + i} x={BAYS[i] ?? 0} y={y2} kind={k} h={1.75} reveal={i % 2 === 0} />)}
         <group position={[0, 0, 0.07]}>{[-5.3, -3.2, 1.4, 4.8].map((x) => <CellarWindow key={x} x={x} />)}</group>
       </group>
       {/* Rückseite: einfache Fenster */}
       <group position={[0, 0, -FZ - 0.01]} rotation={[0, Math.PI, 0]}>
-        {BAYS.map((x, i) => i === 2 ? <Door key={i} x={x} /> : <Window key={i} x={x} y={y1} kind={i % 2 ? "openLouvre" : "closedLouvre"} h={2.0} />)}
-        {BAYS.map((x, i) => <Window key={"u" + i} x={x} y={y2} kind="closedLouvre" h={1.75} />)}
+        {BAYS.map((x, i) => i === 2 ? <Door key={i} x={x} /> : <Window key={i} x={x} y={y1} kind={i % 2 ? "openLouvre" : "closedLouvre"} h={2.0} reveal={i === 0 || i === 4} />)}
+        {BAYS.map((x, i) => <Window key={"u" + i} x={x} y={y2} kind="closedLouvre" h={1.75} reveal={i % 2 === 0} />)}
       </group>
       {/* Linke Seite: je drei Fenster */}
       <group position={[-W / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        {[-2.8, 0, 2.8].map((x) => <Window key={x} x={x} y={y1} kind="closedPanel" h={2.0} />)}
-        {[-2.8, 0, 2.8].map((x) => <Window key={"u" + x} x={x} y={y2} kind="closedLouvre" h={1.75} />)}
+        {[-2.8, 0, 2.8].map((x) => <Window key={x} x={x} y={y1} kind="closedPanel" h={2.0} reveal={x === 0} />)}
+        {[-2.8, 0, 2.8].map((x) => <Window key={"u" + x} x={x} y={y2} kind="closedLouvre" h={1.75} reveal={x === 0} />)}
       </group>
       {/* Fallrohre */}
       {[-1, 1].map((s) => (
@@ -274,6 +281,7 @@ function Street() {
 }
 
 function HouseSlice({ layer, selected, colors, onSelect, ghost = false }: { layer: number; selected: number; colors: InteriorPalette; onSelect: (level: number) => void; ghost?: boolean }) {
+  const glazing = useWindowGlazing();
   const ref = useRef<THREE.Group>(null);
   const invalidate = useThree(state => state.invalidate);
   const lower = (LEVELS.find(item => item.id === layer)?.y ?? -2) + 0.015;
@@ -301,7 +309,7 @@ function HouseSlice({ layer, selected, colors, onSelect, ghost = false }: { laye
       }
     });
     invalidate();
-  }, [planes, invalidate, ghost, layer]);
+  }, [planes, invalidate, ghost, layer, glazing.id, glazing.changed]);
   useFrame((_, delta) => {
     const group = ref.current;
     if (!group) return;
@@ -361,14 +369,31 @@ export default function StadthausScene() {
   const [heatingSystem, setHeatingSystem] = useState<HeatingSystem>('radiators');
   const [reset, setReset] = useState(0);
   const [colors, setColors] = useState<InteriorPalette | null>(null);
+  const [glazing, setGlazing] = useState<GlazingSelection>({ id: 'double', changed: false });
+  const [glazingPalette, setGlazingPalette] = useState<GlazingPalette | null>(null);
+  const windowContext = useMemo(() => glazingPalette ? { selection: glazing, palette: glazingPalette } : null, [glazing, glazingPalette]);
   useEffect(() => {
     const css = getComputedStyle(document.documentElement);
     const palette = Object.fromEntries(['wall', 'wood', 'seam', 'tile', 'grout', 'rug', 'metal', 'brick', 'cap'].map(name => [name, css.getPropertyValue(`--house-${name}`).trim()])) as InteriorPalette;
     setColors(palette);
+    // Canvas resolves modern CSS colors to sRGB; THREE.Color does not parse oklch.
+    const swatch = document.createElement('canvas');
+    swatch.width = 1; swatch.height = 1;
+    const context = swatch.getContext('2d');
+    const readColor = (token: string) => {
+      const value = css.getPropertyValue(token).trim();
+      if (!context) return value;
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+      const pixel = context.getImageData(0, 0, 1, 1).data;
+      return `rgb(${pixel[0] ?? 0}, ${pixel[1] ?? 0}, ${pixel[2] ?? 0})`;
+    };
+    const readWindowColors = (id: string) => ({ glass: readColor(`--house-glass-${id}`), frame: readColor(`--house-frame-${id}`) });
+    setGlazingPalette({ original: readWindowColors('original'), single: readWindowColors('single'), double: readWindowColors('double'), triple: readWindowColors('triple'), quadruple: readWindowColors('quadruple') });
   }, []);
   const current = LEVELS.find(item => item.id === level) ?? LEVELS[1];
   return (
-    <div className={`h-dvh w-full overflow-hidden bg-background ${result ? 'result-layout' : ''}`} data-house-view={view}>
+    <div className={`h-dvh w-full overflow-hidden bg-background ${result ? 'result-layout' : ''}`} data-house-view={view} data-glazing={glazing.id} data-glazing-changed={glazing.changed}>
       <div className="relative h-full min-h-0 min-w-0">
       <Canvas shadows frameloop="demand" onCreated={({ gl }) => { gl.localClippingEnabled = true; }} camera={{ position: [-9, 4, 18], fov: 50 }}>
         <color attach="background" args={["#a9c8e8"]} />
@@ -378,7 +403,7 @@ export default function StadthausScene() {
           <Lightformer intensity={2} position={[0, 10, 0]} scale={[20, 20, 1]} />
           <Lightformer intensity={1} color="#cde" position={[-10, 3, 5]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
         </Environment>
-        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} onSelect={selected => { if (result) return; setLevel(selected); setView('interior'); }} />}
+        {colors && windowContext && <WindowGlazingContext.Provider value={windowContext}><OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} onSelect={selected => { if (result) return; setLevel(selected); setView('interior'); }} /></WindowGlazingContext.Provider>}
         {(!interior || level > 0) && <Street />}
         <ViewCamera interior={interior} level={level} reset={reset} />
       </Canvas>
@@ -413,7 +438,7 @@ export default function StadthausScene() {
         </div>}
         <details hidden={result} open={!interior} className="w-full border-t border-border pt-2">
           <summary className="cursor-pointer text-xs font-semibold">Hausangaben</summary>
-          <div className="mt-2"><HouseDetails exterior={!interior} /></div>
+          <div className="mt-2"><HouseDetails exterior={!interior} glazing={glazing.id} onGlazingChange={id => setGlazing({ id, changed: true })} /></div>
         </details>
       </header>
       {interior && <div className="pointer-events-none absolute inset-x-3 bottom-4 rounded-md border border-border bg-card/95 px-4 py-3 text-card-foreground sm:inset-x-auto sm:left-4 sm:max-w-lg">

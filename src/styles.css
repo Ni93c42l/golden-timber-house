@@ -84,6 +84,16 @@
   --house-metal: #333b3e;
   --house-brick: #976454;
   --house-cap: #8a8982;
+  --house-glass-original: #3f5566;
+  --house-frame-original: #f7f7f4;
+  --house-glass-single: oklch(0.76 0.035 210);
+  --house-frame-single: oklch(0.91 0.025 85);
+  --house-glass-double: oklch(0.61 0.06 225);
+  --house-frame-double: oklch(0.98 0.005 85);
+  --house-glass-triple: oklch(0.48 0.065 210);
+  --house-frame-triple: oklch(0.85 0.01 200);
+  --house-glass-quadruple: oklch(0.34 0.045 230);
+  --house-frame-quadruple: oklch(0.64 0.02 210);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);

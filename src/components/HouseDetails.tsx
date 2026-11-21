@@ -3,11 +3,10 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GLAZING_OPTIONS, HOUSE_AGE, normalizeHouseAge } from '@/lib/house-details';
+import { GLAZING_OPTIONS, HOUSE_AGE, normalizeHouseAge, type Glazing } from '@/lib/house-details';
 
-export default function HouseDetails({ exterior }: { exterior: boolean }) {
+export default function HouseDetails({ exterior, glazing, onGlazingChange }: { exterior: boolean; glazing: Glazing; onGlazingChange: (value: Glazing) => void }) {
   const [age, setAge] = useState(0);
-  const [glazing, setGlazing] = useState('double');
   const [residents, setResidents] = useState('');
   return <div className="grid w-full grid-cols-2 items-start gap-x-4 gap-y-3 border-t border-border pt-3 sm:grid-cols-3">
     <div className="col-span-2 min-w-0 sm:col-span-1">
@@ -20,7 +19,10 @@ export default function HouseDetails({ exterior }: { exterior: boolean }) {
     </div>
     <div className="min-w-0 space-y-2">
       <Label htmlFor="house-glazing" className="text-xs">Verglasung</Label>
-      <Select value={glazing} onValueChange={setGlazing}>
+      <Select value={glazing} onValueChange={value => {
+        const option = GLAZING_OPTIONS.find(item => item.id === value);
+        if (option) onGlazingChange(option.id);
+      }}>
         <SelectTrigger id="house-glazing" aria-label="Verglasung" className="text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>{GLAZING_OPTIONS.map(option => <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>)}</SelectContent>
       </Select>
