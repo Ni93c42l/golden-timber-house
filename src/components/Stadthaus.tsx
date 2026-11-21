@@ -3,10 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
-import { Building2, Layers, RotateCcw } from 'lucide-react';
+import { Building2, Layers, RotateCcw, Flame, Fan, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
-import { HOUSE, LEVELS, liftedOffset } from '@/lib/house-layout';
+import { HOUSE, LEVELS, HEATING_MODES, liftedOffset, type HeatingMode } from '@/lib/house-layout';
 
 // Maße in Metern
 const { width: W, depth: D, socle: SOCLE, storey: FLOOR, top: TOP, roof: ROOF } = HOUSE;
@@ -306,7 +306,7 @@ function HouseSlice({ layer, selected, colors, onSelect }: { layer: number; sele
   }}><House />{layer === 3 && <Chimney colors={colors} />}</group>;
 }
 
-function OpeningHouse({ selected, colors, onSelect }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void }) {
+function OpeningHouse({ selected, colors, onSelect, heatingMode }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void; heatingMode: HeatingMode }) {
   const clickClosedHouse = (event: ThreeEvent<MouseEvent>) => {
     if (event.delta > 5) return;
     event.stopPropagation();
@@ -316,7 +316,7 @@ function OpeningHouse({ selected, colors, onSelect }: { selected: number | null;
   if (selected === null) return <group onClick={clickClosedHouse}><House /><Chimney colors={colors} /></group>;
   return <group name="Aufgeklapptes-Haus">
     {LEVELS.filter(item => item.id !== selected || item.id === 3).map(item => <HouseSlice key={item.id} layer={item.id} selected={selected} colors={colors} onSelect={onSelect} />)}
-    <HouseInterior key={selected} level={selected} colors={colors} />
+    <HouseInterior key={selected} level={selected} colors={colors} heatingMode={heatingMode} />
   </group>;
 }
 
@@ -338,6 +338,7 @@ function ViewCamera({ interior, level, reset }: { interior: boolean; level: numb
 export default function StadthausScene() {
   const [interior, setInterior] = useState(false);
   const [level, setLevel] = useState(1);
+  const [heatingMode, setHeatingMode] = useState<HeatingMode>('gas');
   const [reset, setReset] = useState(0);
   const [colors, setColors] = useState<InteriorPalette | null>(null);
   useEffect(() => {
@@ -356,7 +357,7 @@ export default function StadthausScene() {
           <Lightformer intensity={2} position={[0, 10, 0]} scale={[20, 20, 1]} />
           <Lightformer intensity={1} color="#cde" position={[-10, 3, 5]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
         </Environment>
-        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
+        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
         {(!interior || level > 0) && <Street />}
         <ViewCamera interior={interior} level={level} reset={reset} />
       </Canvas>
@@ -370,10 +371,20 @@ export default function StadthausScene() {
         {interior && <div className="flex w-full flex-wrap gap-1 border-t border-border pt-2" role="group" aria-label="Stockwerk">
           {LEVELS.map(item => <Button key={item.id} size="sm" variant={item.id === level ? 'secondary' : 'ghost'} aria-pressed={item.id === level} onClick={() => setLevel(item.id)}>{item.name}</Button>)}
         </div>}
+        {interior && level === 0 && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
+          <h3 className="text-xs font-semibold">Heizung</h3>
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Heizungsart">
+            {HEATING_MODES.map(mode => {
+              const Icon = mode.id === 'gas' ? Flame : mode.id === 'heat-pump' ? Fan : Server;
+              return <Button key={mode.id} size="sm" variant={heatingMode === mode.id ? 'default' : 'ghost'} aria-pressed={heatingMode === mode.id} onClick={() => setHeatingMode(mode.id)}><Icon />{mode.name}</Button>;
+            })}
+          </div>
+        </div>}
       </header>
       {interior && <div className="pointer-events-none absolute inset-x-3 bottom-4 rounded-md border border-border bg-card/95 px-4 py-3 text-card-foreground sm:inset-x-auto sm:left-4 sm:max-w-lg">
         <h2 className="mb-1 text-sm font-semibold">{current.name}</h2>
         <p className="text-xs leading-5 text-muted-foreground">{current.rooms.join(' · ')}</p>
+        {level === 0 && heatingMode === 'server' && <p className="mt-1 text-xs text-muted-foreground">Serverrack · 1 m × 1 m × 2 m</p>}
       </div>}
     </div>
   );

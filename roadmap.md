@@ -7,3 +7,6 @@
 - [x] Stockwerke durch Klick am Haus öffnen und obere Gebäudeteile anheben.
 - [x] Aufgeklappte Ansicht und Schliessen auf Desktop und Handy prüfen.
 - [x] Nur einen Spalt über der Auswahl öffnen; alle oberen Stockwerke gemeinsam anheben und prüfen.
+- [x] Gasbetrieb, Wärmepumpe und Serverrack im Heizraum auswählbar machen.
+- [x] Serverrack mit 1 × 1 × 2 Metern und angeschlossener Warmwasserleitung darstellen.
+- [x] Alle Varianten und Auswahl auf Desktop und Handy prüfen.

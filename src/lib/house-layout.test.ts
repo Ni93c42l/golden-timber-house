@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, liftedOffset, stairBetween } from './house-layout';
+import { HEAT_SOURCES, LEVELS, liftedOffset, stairBetween } from './house-layout';
 
 describe('Innenräume des Stadthauses', () => {
+  it('zeigt im Gasmodus einen Gasheizkessel', () => {
+    expect(HEAT_SOURCES.gas.device).toBe('gas-boiler');
+  });
+  it('zeigt im Wärmepumpenmodus eine Wärmepumpe', () => {
+    expect(HEAT_SOURCES['heat-pump'].device).toBe('heat-pump');
+  });
+  it('zeigt im Servermodus ein 1 m breites, 1 m tiefes und 2 m hohes Rack', () => {
+    expect(HEAT_SOURCES.server).toEqual({ device: 'server-rack', width: 1, depth: 1, height: 2 });
+  });
   it('ersetzt einen Kellerraum durch einen Heizraum und erhält die anderen Räume', () => {
     const basement = LEVELS.find(level => level.id === 0);
     expect(basement?.rooms).toEqual(['Waschküche', 'Heizraum', 'Vorrat']);
