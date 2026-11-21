@@ -98,9 +98,7 @@ function Door({ x }: { x: number }) {
       <Box p={[x, y0 + h / 2, 0.06]} s={[w, h, 0.06]} c={C.door} r={0.6} />
       <Box p={[x, y0 + h - 0.35, 0.1]} s={[w - 0.12, 0.5, 0.03]} c={C.glass} r={0.2} />
       <Box p={[x, y0 + h - 0.62, 0.11]} s={[w, 0.08, 0.04]} c="#5d1b18" />
-      <Box p={[x - 0.22, y0 + 1.3, 0.11]} s={[0.25, 1.1, 0.02]} c="#1d1d1d" />
-      <Box p={[x + 0.22, y0 + 1.3, 0.1]} s={[0.35, 1.3, 0.02]} c="#6a201c" />
-      <Box p={[x, y0 + h / 2 - 0.1, 0.11]} s={[0.03, h - 0.8, 0.03]} c="#5d1b18" />
+      <Box p={[x, y0 + 1.3, 0.11]} s={[0.4, 1.1, 0.02]} c="#1d1d1d" />
       {/* Hausnummer */}
       <Box p={[x, y0 + h + 0.25, 0.11]} s={[0.22, 0.14, 0.02]} c="#2d5b8a" />
       {/* Stufen */}
@@ -139,20 +137,40 @@ function Roof() {
   );
 }
 
-// Kleine Gauben mit gewölbtem Ocker-Dach
-function Dormer({ x }: { x: number }) {
+// Gauben: aussen klein mit Bogen, Mitte gross mit Dreiecksgiebel
+function Dormer({ x, big }: { x: number; big?: boolean }) {
   const z = FZ - 1.1, yBase = TOP + 0.35 + ROOF * (1 - z / (D / 2));
+  const w = big ? 1.4 : 0.85, h = big ? 1.2 : 0.75, dep = 1.1;
+  const cap = useMemo(() => {
+    const sh = new THREE.Shape();
+    if (big) { sh.moveTo(-w / 2 - 0.12, 0); sh.lineTo(w / 2 + 0.12, 0); sh.lineTo(0, 0.6); sh.closePath(); }
+    else { const rr = w / 2 + 0.08; sh.moveTo(rr, 0); sh.absarc(0, 0, rr, 0, Math.PI, false); sh.closePath(); }
+    return new THREE.ExtrudeGeometry(sh, { depth: dep + 0.1, bevelEnabled: false });
+  }, [big, w]);
   return (
     <group position={[x, yBase, z]}>
-      <Box p={[0, 0.25, -0.3]} s={[1.0, 0.9, 1.0]} c={C.ochre} />
-      <Box p={[0, 0.3, 0.21]} s={[0.55, 0.5, 0.04]} c={C.glass} r={0.2} />
-      <Box p={[0, 0.3, 0.23]} s={[0.04, 0.5, 0.03]} c={C.frame} />
-      <mesh position={[0, 0.7, -0.3]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 0.55]} castShadow>
-        <cylinderGeometry args={[0.6, 0.6, 1.15, 24]} />
-        <meshStandardMaterial color={C.ochre} roughness={0.7} />
+      <Box p={[0, h / 2 - 0.2, -dep / 2 + 0.2]} s={[w, h, dep]} c={C.ochre} />
+      <Box p={[0, h / 2 - 0.15, 0.71]} s={[w - 0.3, h - 0.25, 0.04]} c={C.glass} r={0.2} />
+      <Box p={[0, h / 2 - 0.15, 0.73]} s={[0.04, h - 0.25, 0.03]} c={C.frame} />
+      <mesh geometry={cap} position={[0, h - 0.2, -dep + 0.2]} castShadow>
+        <meshStandardMaterial color={big ? C.roof : C.ochre} roughness={0.7} />
       </mesh>
-      <Box p={[0, 0.75, 0.27]} s={[1.25, 0.06, 0.06]} c={C.ochreDark} />
     </group>
+  );
+}
+
+// Giebelwände: schliessen den Dachraum seitlich
+function Gables() {
+  const h = D / 2;
+  const geo = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-h, 0); s.lineTo(h, 0); s.lineTo(h, 0.35); s.lineTo(0, 0.35 + ROOF); s.lineTo(-h, 0.35); s.closePath();
+    return new THREE.ExtrudeGeometry(s, { depth: W, bevelEnabled: false });
+  }, [h]);
+  return (
+    <mesh geometry={geo} position={[-W / 2, TOP, 0]} rotation={[0, Math.PI / 2, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color={C.plaster} roughness={0.95} />
+    </mesh>
   );
 }
 
@@ -189,12 +207,17 @@ function House() {
       <group position={[0, 0, FZ + 0.01]}>
         {ground.map((k, i) => k === "door" ? <Door key={i} x={BAYS[i]!} /> : <Window key={i} x={BAYS[i]!} y={y1} kind={k} h={2.0} />)}
         {upper.map((k, i) => <Window key={"u" + i} x={BAYS[i]!} y={y2} kind={k} h={1.75} />)}
-        <group position={[0, 0, 0.07]}>{[-3.2, 1.4, 4.8].map((x) => <CellarWindow key={x} x={x} />)}</group>
+        <group position={[0, 0, 0.07]}>{[-5.3, -3.2, 1.4, 4.8].map((x) => <CellarWindow key={x} x={x} />)}</group>
       </group>
       {/* Rückseite: einfache Fenster */}
       <group position={[0, 0, -FZ - 0.01]} rotation={[0, Math.PI, 0]}>
-        {BAYS.map((x, i) => <Window key={i} x={x} y={y1} kind={i % 2 ? "openLouvre" : "closedLouvre"} h={2.0} />)}
+        {BAYS.map((x, i) => i === 2 ? <Door key={i} x={x} /> : <Window key={i} x={x} y={y1} kind={i % 2 ? "openLouvre" : "closedLouvre"} h={2.0} />)}
         {BAYS.map((x, i) => <Window key={"u" + i} x={x} y={y2} kind="closedLouvre" h={1.75} />)}
+      </group>
+      {/* Linke Seite: je drei Fenster */}
+      <group position={[-W / 2 - 0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        {[-2.8, 0, 2.8].map((x) => <Window key={x} x={x} y={y1} kind="closedPanel" h={2.0} />)}
+        {[-2.8, 0, 2.8].map((x) => <Window key={"u" + x} x={x} y={y2} kind="closedLouvre" h={1.75} />)}
       </group>
       {/* Fallrohre */}
       {[-1, 1].map((s) => (
@@ -204,7 +227,8 @@ function House() {
       ))}
       <Box p={[0, TOP + 0.45, FZ + 0.45]} s={[W + 0.4, 0.14, 0.16]} c={C.pipe} r={0.4} />
       <Roof />
-      {[-3.6, 0.6, 4.4].map((x) => <Dormer key={x} x={x} />)}
+      <Gables />
+      {[-3.6, 0.6, 4.4].map((x) => <Dormer key={x} x={x} big={x === 0.6} />)}
       <Antenna />
     </group>
   );
@@ -213,9 +237,9 @@ function House() {
 function Street() {
   const items: React.ReactElement[] = [];
   // Geländer und Büsche vor dem Haus
-  for (let x = -6; x <= 6; x += 2) items.push(<Box key={"p" + x} p={[x, 0.5, FZ + 2.3]} s={[0.06, 1, 0.06]} c="#888" r={0.4} />);
-  items.push(<Box key="rail" p={[0, 1, FZ + 2.3]} s={[12, 0.06, 0.06]} c="#888" r={0.4} />);
-  [[-5.5, 0.9], [-0.9, 0.8], [3.2, 0.7], [6, 0.8]].forEach(([x, s], i) => items.push(
+  for (let x = -6; x <= 6; x += 2) items.push(<Box key={"p" + x} p={[x, 0.5, FZ + 3.4]} s={[0.06, 1, 0.06]} c="#888" r={0.4} />);
+  items.push(<Box key="rail" p={[0, 1, FZ + 3.4]} s={[12, 0.06, 0.06]} c="#888" r={0.4} />);
+  [[-5.5, 0.9], [-1.7, 0.7], [3.2, 0.7], [6, 0.8]].forEach(([x, s], i) => items.push(
     <group key={"b" + i}>
       <Box p={[x!, 0.2, FZ + 0.7]} s={[0.5, 0.4, 0.5]} c="#a06a45" />
       <mesh position={[x!, 0.4 + s! * 0.6, FZ + 0.7]} castShadow><sphereGeometry args={[s! * 0.6, 14, 12]} /><meshStandardMaterial color={C.green} roughness={1} /></mesh>
@@ -223,7 +247,9 @@ function Street() {
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#8d8a84" roughness={1} /></mesh>
-      <Box p={[0, 0.01, FZ + 1.2]} s={[W + 4, 0.04, 2.4]} c="#b3aca0" />
+      <Box p={[0, 0.01, FZ + 1.75]} s={[W + 4, 0.04, 3.5]} c="#b3aca0" />
+      {/* Garten hinter dem Haus */}
+      <Box p={[0, 0.02, -FZ - 5]} s={[W + 4, 0.04, 10]} c="#5f7d3e" r={1} />
       {items}
     </group>
   );
