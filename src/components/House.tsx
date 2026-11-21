@@ -267,7 +267,7 @@ function Garden() {
     <mesh key={"b" + i} position={[x!, 0.35, z!]} castShadow><sphereGeometry args={[0.45 + r() * 0.2, 12, 10]} /><meshStandardMaterial color={C.hedge} roughness={1} /></mesh>));
   for (let i = 0; i < 26; i++) {
     const x = -4.2 + r() * 2.8, z = gz1 + 0.8 + r() * 2.8;
-    items.push(<mesh key={"fl" + i} position={[x, 0.12, z]}><sphereGeometry args={[0.07, 6, 6]} /><meshStandardMaterial color={["#c44d3d", "#e8d24a", "#f0f0ea", "#9b5fa8"][i % 4]} /></mesh>);
+    items.push(<mesh key={"fl" + i} position={[x, 0.12, z]}><sphereGeometry args={[0.07, 6, 6]} /><meshStandardMaterial color={["#c44d3d", "#e8d24a", "#f0f0ea", "#9b5fa8"][i % 4]!} /></mesh>);
   }
   return (
     <group>
