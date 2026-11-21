@@ -1,6 +1,6 @@
 export const HOUSE = { width: 12.5, depth: 9, socle: 1.3, storey: 3.3, top: 7.9, roof: 3.6 } as const;
 export const LEVELS = [
-  { id: 0, name: 'Keller', y: -1.4, rooms: ['Waschküche', 'Werkstatt', 'Vorrat'] },
+  { id: 0, name: 'Keller', y: -1.4, rooms: ['Waschküche', 'Heizraum', 'Vorrat'] },
   { id: 1, name: 'Erdgeschoss', y: 1.3, rooms: ['Wohnzimmer', 'Küche', 'Esszimmer', 'Gäste-WC'] },
   { id: 2, name: 'Obergeschoss', y: 4.6, rooms: ['Schlafzimmer', 'Kinderzimmer', 'Arbeitszimmer', 'Bad'] },
   { id: 3, name: 'Dachstock', y: 7.9, rooms: ['Gästezimmer', 'Lesezimmer', 'Abstellraum'] },

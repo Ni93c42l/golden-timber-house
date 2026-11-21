@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { LEVELS, liftedOffset, stairBetween } from './house-layout';
 
 describe('Innenräume des Stadthauses', () => {
+  it('ersetzt einen Kellerraum durch einen Heizraum und erhält die anderen Räume', () => {
+    const basement = LEVELS.find(level => level.id === 0);
+    expect(basement?.rooms).toEqual(['Waschküche', 'Heizraum', 'Vorrat']);
+  });
   it('enthält Schlafzimmer, Küche und Wohnzimmer', () => {
     const rooms: string[] = LEVELS.flatMap(level => [...level.rooms]);
     for (const room of ['Schlafzimmer', 'Küche', 'Wohnzimmer']) expect(rooms).toContain(room);

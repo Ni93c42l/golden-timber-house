@@ -76,6 +76,68 @@ function Staircase({ level, colors }: { level: number; colors: InteriorPalette }
     </mesh>)}
   </group>;
 }
+function HeatingPipe({ from, to, color, radius = 0.055 }: { from: V3; to: V3; color: string; radius?: number }) {
+  const { position, rotation, length } = useMemo(() => {
+    const start = new THREE.Vector3(...from), end = new THREE.Vector3(...to);
+    const direction = end.clone().sub(start);
+    return {
+      position: start.clone().add(end).multiplyScalar(0.5),
+      rotation: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize()),
+      length: direction.length(),
+    };
+  }, [from, to]);
+  return <mesh position={position} quaternion={rotation} castShadow>
+    <cylinderGeometry args={[radius, radius, length, 12]} />
+    <meshStandardMaterial color={color} metalness={0.65} roughness={0.3} />
+  </mesh>;
+}
+function HeatingRoom({ colors }: { colors: InteriorPalette }) {
+  return <group name="Heizraum" position={[-3.65, 0.03, 1.65]}>
+    <group name="Heizkessel" position={[-1.15, 0, 0]}>
+      <Solid p={[0, 0.1, 0]} s={[1.35, 0.2, 1.25]} color={colors.metal} />
+      <Solid p={[0, 0.88, 0]} s={[1.2, 1.4, 1.05]} color={colors.rug} />
+      <Solid p={[0, 1.61, 0]} s={[1.24, 0.08, 1.1]} color={colors.cap} />
+      <Solid p={[0, 1.3, 0.542]} s={[0.98, 0.3, 0.06]} color={colors.metal} />
+      <Solid p={[-0.2, 1.31, 0.579]} s={[0.3, 0.12, 0.025]} color={colors.tile} />
+      {[0.14, 0.32].map(x => <mesh key={x} position={[x, 1.31, 0.59]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.055, 0.055, 0.04, 16]} /><meshStandardMaterial color={colors.cap} />
+      </mesh>)}
+      <Solid p={[0, 0.65, 0.551]} s={[0.8, 0.58, 0.07]} color={colors.metal} />
+      <Solid p={[0.27, 0.66, 0.61]} s={[0.06, 0.25, 0.07]} color={colors.cap} />
+      {[0, 1, 2, 3].map(i => <Solid key={i} p={[-0.1, 0.5 + i * 0.07, 0.591]} s={[0.4, 0.018, 0.012]} color={colors.cap} />)}
+      <HeatingPipe from={[0, 1.65, -0.18]} to={[0, 2.3, -0.18]} color={colors.cap} radius={0.14} />
+      <HeatingPipe from={[0, 2.3, -0.18]} to={[-0.75, 2.3, -0.18]} color={colors.cap} radius={0.14} />
+    </group>
+    <group name="Warmwasserspeicher" position={[0.95, 0, 0]}>
+      <mesh position={[0, 1.04, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.46, 0.46, 1.86, 32]} />
+        <meshStandardMaterial color={colors.grout} metalness={0.25} roughness={0.4} />
+      </mesh>
+      {[0.13, 1.96].map(y => <mesh key={y} position={[0, y, 0]} castShadow>
+        <cylinderGeometry args={[0.47, 0.47, 0.1, 32]} /><meshStandardMaterial color={colors.cap} metalness={0.6} roughness={0.3} />
+      </mesh>)}
+      <mesh position={[0, 1.49, 0.465]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.11, 0.11, 0.04, 24]} /><meshStandardMaterial color={colors.metal} />
+      </mesh>
+      <mesh position={[0, 1.49, 0.492]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.085, 0.085, 0.018, 24]} /><meshStandardMaterial color={colors.wall} />
+      </mesh>
+      <Solid p={[0.018, 1.515, 0.506]} s={[0.014, 0.08, 0.012]} color={colors.rug} />
+    </group>
+    {[-0.18, 0.18].map((z, i) => <group key={z} name={i === 0 ? 'Vorlauf' : 'Rücklauf'}>
+      <HeatingPipe from={[-0.75, 1.65, z]} to={[-0.75, 2.15, z]} color={colors.brick} />
+      <HeatingPipe from={[-0.75, 2.15, z]} to={[0.95, 2.15, z]} color={colors.brick} />
+      <HeatingPipe from={[0.95, 2.15, z]} to={[0.95, 1.98, z]} color={colors.brick} />
+      <HeatingPipe from={[-0.35, 2.15, z]} to={[-0.35, 2.5, z]} color={colors.brick} />
+      <Solid p={[-0.35, 2.33, z + 0.05]} s={[0.22, 0.035, 0.08]} color={i === 0 ? colors.rug : colors.tile} />
+    </group>)}
+    <group name="Ausdehnungsgefäss" position={[1.75, 1.55, -0.25]}>
+      <mesh castShadow><sphereGeometry args={[0.26, 20, 16]} /><meshStandardMaterial color={colors.rug} roughness={0.45} /></mesh>
+      <HeatingPipe from={[0, 0.26, 0]} to={[0, 0.6, 0]} color={colors.brick} />
+      <HeatingPipe from={[0, 0.6, 0]} to={[-0.8, 0.6, 0.07]} color={colors.brick} />
+    </group>
+  </group>;
+}
 function FurnishedRooms({ level, colors }: { level: number; colors: InteriorPalette }) {
   const f = (name: string, x: number, z: number, width: number, angle = 0, y = 0.03) => <Furniture key={`${name}-${x}-${z}`} name={name} p={[x, y, z]} width={width} angle={angle} />;
   const objects = level === 1 ? [
@@ -103,7 +165,6 @@ function FurnishedRooms({ level, colors }: { level: number; colors: InteriorPale
     f('cardboardBoxClosed', -4.6, -2.9, 0.7), f('cardboardBoxClosed', 3.2, -2.9, 0.7),
   ] : [
     f('washer', -4.8, -3.3, 0.8), f('dryer', -3.7, -3.3, 0.8), f('bathroomSink', -2.5, -3.4, 0.8),
-    f('desk', -3.6, 1.2, 2.4), f('chair', -3.6, 2.3, 0.5), f('bookcaseOpen', -5.3, 2.9, 1.6, Math.PI / 2),
     f('bookcaseOpen', 5.4, -2.3, 1.6, -Math.PI / 2), f('bookcaseOpen', 3, -3.65, 1.6),
     f('cardboardBoxClosed', 3, 2, 0.8), f('cardboardBoxClosed', 4.2, 2, 0.9), f('cardboardBoxClosed', 3.1, 3, 0.7),
   ];
@@ -141,6 +202,7 @@ export default function HouseInterior({ level, colors }: { level: number; colors
     {level === 3 && [-2.8, 2.8].map(z => <mesh key={z} position={[0, 1.6, z]} rotation-x={z < 0 ? 0.67 : -0.67}>
       <boxGeometry args={[12.1, 0.14, 0.18]} /><meshStandardMaterial color={colors.wood} />
     </mesh>)}
+    {level === 0 && <HeatingRoom colors={colors} />}
     <Suspense fallback={null}><FurnishedRooms level={level} colors={colors} /></Suspense>
   </group>;
 }
