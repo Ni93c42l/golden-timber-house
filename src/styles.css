@@ -57,6 +57,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+  --color-offer-accent: var(--offer-accent);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -73,6 +74,7 @@
 }
 
 :root {
+  --offer-accent: oklch(0.47 0.105 170);
   --house-wall: #f1efe9;
   --house-wood: #ad805a;
   --house-seam: #73543b;
@@ -118,6 +120,7 @@
 }
 
 .dark {
+  --offer-accent: oklch(0.76 0.12 170);
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -161,4 +164,18 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+.result-layout {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 46%);
+}
+.result-offer { border-top-width: 1px; }
+.result-offer[hidden] { display: none; }
+@media (min-width: 768px) {
+  .result-layout {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .result-offer { border-top-width: 0; border-left-width: 1px; }
 }

@@ -3,9 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
-import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2 } from 'lucide-react';
+import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HouseDetails from '@/components/HouseDetails';
+import RackOffer from '@/components/RackOffer';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
 import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, facadeOpacity, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
@@ -352,7 +353,9 @@ function ViewCamera({ interior, level, reset }: { interior: boolean; level: numb
 }
 
 export default function StadthausScene() {
-  const [interior, setInterior] = useState(false);
+  const [view, setView] = useState<'exterior' | 'interior' | 'result'>('exterior');
+  const interior = view !== 'exterior';
+  const result = view === 'result';
   const [level, setLevel] = useState(1);
   const [heatingMode, setHeatingMode] = useState<HeatingMode>('gas');
   const [heatingSystem, setHeatingSystem] = useState<HeatingSystem>('radiators');
@@ -365,7 +368,8 @@ export default function StadthausScene() {
   }, []);
   const current = LEVELS.find(item => item.id === level) ?? LEVELS[1];
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-background" data-house-view={interior ? 'interior' : 'exterior'}>
+    <div className={`h-dvh w-full overflow-hidden bg-background ${result ? 'result-layout' : ''}`} data-house-view={view}>
+      <div className="relative h-full min-h-0 min-w-0">
       <Canvas shadows frameloop="demand" onCreated={({ gl }) => { gl.localClippingEnabled = true; }} camera={{ position: [-9, 4, 18], fov: 50 }}>
         <color attach="background" args={["#a9c8e8"]} />
         <hemisphereLight args={["#ffffff", "#8a8070", 0.7]} />
@@ -374,21 +378,22 @@ export default function StadthausScene() {
           <Lightformer intensity={2} position={[0, 10, 0]} scale={[20, 20, 1]} />
           <Lightformer intensity={1} color="#cde" position={[-10, 3, 5]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
         </Environment>
-        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
+        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} onSelect={selected => { if (result) return; setLevel(selected); setView('interior'); }} />}
         {(!interior || level > 0) && <Street />}
         <ViewCamera interior={interior} level={level} reset={reset} />
       </Canvas>
       <header className="absolute inset-x-3 top-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/95 p-3 text-card-foreground sm:inset-x-4 sm:top-4">
         <h1 className="text-lg font-semibold">Stadthaus</h1>
         <div className="flex items-center gap-1" role="group" aria-label="Hausansicht">
-          <Button size="sm" variant={interior ? 'ghost' : 'default'} aria-pressed={!interior} onClick={() => setInterior(false)}><Building2 />Aussen</Button>
-          <Button size="sm" variant={interior ? 'default' : 'ghost'} aria-pressed={interior} onClick={() => setInterior(true)}><Layers />Innen</Button>
+          <Button size="sm" variant={view === 'exterior' ? 'default' : 'ghost'} aria-pressed={view === 'exterior'} onClick={() => setView('exterior')}><Building2 />Aussen</Button>
+          <Button size="sm" variant={view === 'interior' ? 'default' : 'ghost'} aria-pressed={view === 'interior'} onClick={() => setView('interior')}><Layers />Innen</Button>
+          <Button size="sm" variant={result ? 'default' : 'ghost'} aria-pressed={result} onClick={() => setView('result')}><ClipboardCheck />Ergebnis</Button>
           <Button size="icon" variant="ghost" title="Ansicht zurücksetzen" aria-label="Ansicht zurücksetzen" onClick={() => setReset(value => value + 1)}><RotateCcw /></Button>
         </div>
-        {interior && <div className="flex w-full flex-wrap gap-1 border-t border-border pt-2" role="group" aria-label="Stockwerk">
+        {view === 'interior' && <div className="flex w-full flex-wrap gap-1 border-t border-border pt-2" role="group" aria-label="Stockwerk">
           {LEVELS.map(item => <Button key={item.id} size="sm" variant={item.id === level ? 'secondary' : 'ghost'} aria-pressed={item.id === level} onClick={() => setLevel(item.id)}>{item.name}</Button>)}
         </div>}
-        {interior && level === 0 && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
+        {view === 'interior' && level === 0 && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
           <h3 className="text-xs font-semibold">Heizung</h3>
           <div className="flex flex-wrap gap-1" role="group" aria-label="Heizungsart">
             {HEATING_MODES.map(mode => {
@@ -397,7 +402,7 @@ export default function StadthausScene() {
             })}
           </div>
         </div>}
-        {interior && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
+        {view === 'interior' && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
           <h3 className="text-xs font-semibold">Heizsystem</h3>
           <div className="flex flex-wrap gap-1" role="group" aria-label="Heizsystem">
             {HEATING_SYSTEMS.map(system => {
@@ -406,7 +411,7 @@ export default function StadthausScene() {
             })}
           </div>
         </div>}
-        <details open={!interior} className="w-full border-t border-border pt-2">
+        <details hidden={result} open={!interior} className="w-full border-t border-border pt-2">
           <summary className="cursor-pointer text-xs font-semibold">Hausangaben</summary>
           <div className="mt-2"><HouseDetails exterior={!interior} /></div>
         </details>
@@ -416,6 +421,8 @@ export default function StadthausScene() {
         <p className="text-xs leading-5 text-muted-foreground">{current.rooms.join(' · ')}</p>
         {level === 0 && heatingMode === 'server' && <p className="mt-1 text-xs text-muted-foreground">Serverrack · 1 m × 1 m × 2 m</p>}
       </div>}
+      </div>
+      <RackOffer visible={result} />
     </div>
   );
 }
