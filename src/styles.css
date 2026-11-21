@@ -73,6 +73,15 @@
 }
 
 :root {
+  --house-wall: #f1efe9;
+  --house-wood: #ad805a;
+  --house-seam: #73543b;
+  --house-tile: #b9d0cd;
+  --house-grout: #e4e4dc;
+  --house-rug: #9d4346;
+  --house-metal: #333b3e;
+  --house-brick: #976454;
+  --house-cap: #8a8982;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);

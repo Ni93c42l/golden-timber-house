@@ -28,3 +28,9 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## House viewer
+- Keep storey dimensions and stair connectivity in `src/lib/house-layout.ts`; a shared layout makes interior geometry and tests agree.
+- Open storeys by clicking the house: vertically clip the unchanged facade into animated slices and lift only upper layers; keep the selected furnished cutaway at its original elevation.
+- Load CC0 furniture from local asset pointers, clone cached GLB scenes and normalize their bounds per instance; shared cached objects must never be mutated.
+- Read new 3D material colors from `--house-*` global CSS tokens; the viewer and interior share a semantic palette.

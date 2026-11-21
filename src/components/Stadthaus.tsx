@@ -1,11 +1,15 @@
 import type React from "react";
-import { useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
+import { Building2, Layers, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
+import { HOUSE, LEVELS, liftedOffset } from '@/lib/house-layout';
 
 // Maße in Metern
-const W = 12.5, D = 9, SOCLE = 1.3, FLOOR = 3.3, TOP = SOCLE + 2 * FLOOR, ROOF = 3.6;
+const { width: W, depth: D, socle: SOCLE, storey: FLOOR, top: TOP, roof: ROOF } = HOUSE;
 const FZ = D / 2;
 const C = {
   plaster: "#f1efe9", ochre: "#e3b46a", ochreDark: "#c99550", roof: "#3a3532",
@@ -28,7 +32,8 @@ function usePlaster(w: number, h: number) {
   return useMemo(() => {
     const cv = document.createElement("canvas");
     cv.width = 512; cv.height = 512;
-    const g = cv.getContext("2d")!;
+    const g = cv.getContext("2d");
+    if (!g) return new THREE.CanvasTexture(cv);
     g.fillStyle = C.plaster; g.fillRect(0, 0, 512, 512);
     for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(120,110,100,${Math.random() * 0.04})`; g.fillRect(Math.random() * 512, Math.random() * 512, 3, 3); }
     g.fillStyle = "rgba(110,105,100,0.45)";
@@ -215,8 +220,8 @@ function House() {
       <Box p={[0, TOP + 0.25, FZ + 0.2]} s={[W + 0.5, 0.18, 0.3]} c={C.ochreDark} />
       <Box p={[0, TOP + 0.05, -FZ - 0.1]} s={[W + 0.3, 0.3, 0.22]} c={C.ochre} />
       <group position={[0, 0, FZ + 0.01]}>
-        {ground.map((k, i) => k === "door" ? <Door key={i} x={BAYS[i]!} /> : <Window key={i} x={BAYS[i]!} y={y1} kind={k} h={2.0} />)}
-        {upper.map((k, i) => <Window key={"u" + i} x={BAYS[i]!} y={y2} kind={k} h={1.75} />)}
+        {ground.map((k, i) => k === "door" ? <Door key={i} x={BAYS[i] ?? 0} /> : <Window key={i} x={BAYS[i] ?? 0} y={y1} kind={k} h={2.0} />)}
+        {upper.map((k, i) => <Window key={"u" + i} x={BAYS[i] ?? 0} y={y2} kind={k} h={1.75} />)}
         <group position={[0, 0, 0.07]}>{[-5.3, -3.2, 1.4, 4.8].map((x) => <CellarWindow key={x} x={x} />)}</group>
       </group>
       {/* Rückseite: einfache Fenster */}
@@ -249,10 +254,11 @@ function Street() {
   // Geländer und Büsche vor dem Haus
   for (let x = -6; x <= 6; x += 2) items.push(<Box key={"p" + x} p={[x, 0.5, FZ + 3.4]} s={[0.06, 1, 0.06]} c="#888" r={0.4} />);
   items.push(<Box key="rail" p={[0, 1, FZ + 3.4]} s={[12, 0.06, 0.06]} c="#888" r={0.4} />);
-  [[-5.5, 0.9], [-1.7, 0.7], [3.2, 0.7], [6, 0.8]].forEach(([x, s], i) => items.push(
+  const shrubs: [number, number][] = [[-5.5, 0.9], [-1.7, 0.7], [3.2, 0.7], [6, 0.8]];
+  shrubs.forEach(([x, s], i) => items.push(
     <group key={"b" + i}>
-      <Box p={[x!, 0.2, FZ + 0.7]} s={[0.5, 0.4, 0.5]} c="#a06a45" />
-      <mesh position={[x!, 0.4 + s! * 0.6, FZ + 0.7]} castShadow><sphereGeometry args={[s! * 0.6, 14, 12]} /><meshStandardMaterial color={C.green} roughness={1} /></mesh>
+      <Box p={[x, 0.2, FZ + 0.7]} s={[0.5, 0.4, 0.5]} c="#a06a45" />
+      <mesh position={[x, 0.4 + s * 0.6, FZ + 0.7]} castShadow><sphereGeometry args={[s * 0.6, 14, 12]} /><meshStandardMaterial color={C.green} roughness={1} /></mesh>
     </group>));
   return (
     <group>
@@ -265,10 +271,84 @@ function Street() {
   );
 }
 
+function HouseSlice({ layer, selected, colors, onSelect }: { layer: number; selected: number; colors: InteriorPalette; onSelect: (level: number) => void }) {
+  const ref = useRef<THREE.Group>(null);
+  const invalidate = useThree(state => state.invalidate);
+  const lower = (LEVELS.find(item => item.id === layer)?.y ?? -2) + 0.015;
+  const upper = (LEVELS.find(item => item.id === layer + 1)?.y ?? 40) - 0.015;
+  const planes = useMemo(() => [new THREE.Plane(new THREE.Vector3(0, 1, 0), -lower), new THREE.Plane(new THREE.Vector3(0, -1, 0), upper)], [lower, upper]);
+  const target = liftedOffset(layer, selected);
+  useLayoutEffect(() => {
+    ref.current?.traverse(node => {
+      if (node instanceof THREE.Mesh) {
+        const materials = Array.isArray(node.material) ? node.material : [node.material];
+        materials.forEach(material => { material.clippingPlanes = planes; material.clipShadows = true; material.needsUpdate = true; });
+      }
+    });
+    invalidate();
+  }, [planes, invalidate]);
+  useFrame((_, delta) => {
+    const group = ref.current;
+    if (!group) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    group.position.y = reduced ? target : THREE.MathUtils.damp(group.position.y, target, 7, Math.min(delta, 0.05));
+    if (Math.abs(group.position.y - target) < 0.02) group.position.y = target;
+    planes[0]?.set(new THREE.Vector3(0, 1, 0), -lower - group.position.y);
+    planes[1]?.set(new THREE.Vector3(0, -1, 0), upper + group.position.y);
+    group.userData['lift'] = group.position.y;
+    if (group.position.y !== target) invalidate();
+  });
+  return <group ref={ref} name={`Haus-Stockwerk-${layer}`} onClick={event => {
+    if (event.delta > 5) return;
+    const localY = event.point.y - (ref.current?.position.y ?? 0);
+    if (localY < lower || localY > upper) return;
+    event.stopPropagation(); onSelect(layer);
+  }}><House />{layer === 3 && <Chimney colors={colors} />}</group>;
+}
+
+function OpeningHouse({ selected, colors, onSelect }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void }) {
+  const clickClosedHouse = (event: ThreeEvent<MouseEvent>) => {
+    if (event.delta > 5) return;
+    event.stopPropagation();
+    const level = event.point.y < SOCLE ? 0 : event.point.y < SOCLE + FLOOR ? 1 : event.point.y < TOP ? 2 : 3;
+    onSelect(level);
+  };
+  if (selected === null) return <group onClick={clickClosedHouse}><House /><Chimney colors={colors} /></group>;
+  return <group name="Aufgeklapptes-Haus">
+    {LEVELS.filter(item => item.id !== selected || item.id === 3).map(item => <HouseSlice key={item.id} layer={item.id} selected={selected} colors={colors} onSelect={onSelect} />)}
+    <HouseInterior key={selected} level={selected} colors={colors} />
+  </group>;
+}
+
+function ViewCamera({ interior, level, reset }: { interior: boolean; level: number; reset: number }) {
+  const { camera, invalidate, size } = useThree();
+  const y = LEVELS.find(item => item.id === level)?.y ?? SOCLE;
+  const distanceScale = Math.max(1, 0.82 / (size.width / size.height));
+  useEffect(() => {
+    const targetY = interior ? (level === 0 ? 12 : level === 1 ? 12 : 11) : 5;
+    const offset: V3 = interior ? [22, 12, 32] : [-9, -1, 18];
+    camera.position.set(offset[0] * distanceScale, targetY + offset[1] * distanceScale, offset[2] * distanceScale);
+    camera.lookAt(0, targetY, 0);
+    camera.updateProjectionMatrix(); invalidate();
+  }, [camera, invalidate, interior, y, reset, distanceScale]);
+  useFrame(() => { document.querySelector('[data-house-view]')?.setAttribute('data-scene-ready', 'true'); });
+  return <OrbitControls key={`${interior}-${level}-${reset}`} target={[0, interior ? (level < 2 ? 12 : 11) : 5, 0]} minDistance={5} maxDistance={100} maxPolarAngle={Math.PI / 2.05} />;
+}
+
 export default function StadthausScene() {
+  const [interior, setInterior] = useState(false);
+  const [level, setLevel] = useState(1);
+  const [reset, setReset] = useState(0);
+  const [colors, setColors] = useState<InteriorPalette | null>(null);
+  useEffect(() => {
+    const css = getComputedStyle(document.documentElement);
+    const palette = Object.fromEntries(['wall', 'wood', 'seam', 'tile', 'grout', 'rug', 'metal', 'brick', 'cap'].map(name => [name, css.getPropertyValue(`--house-${name}`).trim()])) as InteriorPalette;
+    setColors(palette);
+  }, []);
+  const current = LEVELS.find(item => item.id === level) ?? LEVELS[1];
   return (
-    <div className="relative h-screen w-full bg-background" data-scene-ready>
-      <Canvas shadows camera={{ position: [-9, 4, 18], fov: 50 }}>
+    <div className="relative h-dvh w-full overflow-hidden bg-background" data-house-view={interior ? 'interior' : 'exterior'}>
+      <Canvas shadows frameloop="demand" onCreated={({ gl }) => { gl.localClippingEnabled = true; }} camera={{ position: [-9, 4, 18], fov: 50 }}>
         <color attach="background" args={["#a9c8e8"]} />
         <hemisphereLight args={["#ffffff", "#8a8070", 0.7]} />
         <directionalLight position={[-10, 22, 16]} intensity={2.3} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-16} shadow-camera-right={16} shadow-camera-top={16} shadow-camera-bottom={-16} />
@@ -276,13 +356,25 @@ export default function StadthausScene() {
           <Lightformer intensity={2} position={[0, 10, 0]} scale={[20, 20, 1]} />
           <Lightformer intensity={1} color="#cde" position={[-10, 3, 5]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
         </Environment>
-        <House />
-        <Street />
-        <OrbitControls target={[0, 5, 0]} maxPolarAngle={Math.PI / 2.05} />
+        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
+        {(!interior || level > 0) && <Street />}
+        <ViewCamera interior={interior} level={level} reset={reset} />
       </Canvas>
-      <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-card/80 px-3 py-2 text-sm text-card-foreground">
-        Stadthaus nach Foto · ziehen zum Drehen, scrollen zum Zoomen
-      </div>
+      <header className="absolute inset-x-3 top-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/95 p-3 text-card-foreground sm:inset-x-4 sm:top-4">
+        <h1 className="text-lg font-semibold">Stadthaus</h1>
+        <div className="flex items-center gap-1" role="group" aria-label="Hausansicht">
+          <Button size="sm" variant={interior ? 'ghost' : 'default'} aria-pressed={!interior} onClick={() => setInterior(false)}><Building2 />Aussen</Button>
+          <Button size="sm" variant={interior ? 'default' : 'ghost'} aria-pressed={interior} onClick={() => setInterior(true)}><Layers />Innen</Button>
+          <Button size="icon" variant="ghost" title="Ansicht zurücksetzen" aria-label="Ansicht zurücksetzen" onClick={() => setReset(value => value + 1)}><RotateCcw /></Button>
+        </div>
+        {interior && <div className="flex w-full flex-wrap gap-1 border-t border-border pt-2" role="group" aria-label="Stockwerk">
+          {LEVELS.map(item => <Button key={item.id} size="sm" variant={item.id === level ? 'secondary' : 'ghost'} aria-pressed={item.id === level} onClick={() => setLevel(item.id)}>{item.name}</Button>)}
+        </div>}
+      </header>
+      {interior && <div className="pointer-events-none absolute inset-x-3 bottom-4 rounded-md border border-border bg-card/95 px-4 py-3 text-card-foreground sm:inset-x-auto sm:left-4 sm:max-w-lg">
+        <h2 className="mb-1 text-sm font-semibold">{current.name}</h2>
+        <p className="text-xs leading-5 text-muted-foreground">{current.rooms.join(' · ')}</p>
+      </div>}
     </div>
   );
 }
