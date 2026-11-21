@@ -15,5 +15,5 @@ export function stairBetween(lower: number) {
 export function liftedOffset(layer: number, selected: number | null) {
   if (selected === null) return 0;
   if (layer === 3 && selected === 3) return 7;
-  return layer > selected ? 7 + (layer - selected - 1) * 4 : 0;
+  return layer > selected ? 7 : 0;
 }

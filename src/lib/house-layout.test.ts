@@ -20,8 +20,19 @@ describe('Innenräume des Stadthauses', () => {
     expect(liftedOffset(0, 1)).toBe(0);
     expect(liftedOffset(1, 1)).toBe(0);
     expect(liftedOffset(2, 1)).toBe(7);
-    expect(liftedOffset(3, 1)).toBe(11);
+    expect(liftedOffset(3, 1)).toBe(7);
     expect(liftedOffset(3, 3)).toBe(7);
     for (const layer of [0, 1, 2, 3]) expect(liftedOffset(layer, null)).toBe(0);
+  });
+  it('lässt oberhalb der Auswahl alle Stockwerke verbunden und erzeugt genau einen Spalt', () => {
+    for (const selected of [0, 1, 2]) {
+      const offsets = [0, 1, 2, 3].map(layer => liftedOffset(layer, selected));
+      const gaps = offsets.slice(1).map((offset, index) => offset - (offsets[index] ?? 0));
+      expect(gaps.filter(gap => gap > 0)).toEqual([7]);
+      expect(gaps[selected]).toBe(7);
+      for (let layer = selected + 1; layer < 3; layer++) {
+        expect(liftedOffset(layer + 1, selected)).toBe(liftedOffset(layer, selected));
+      }
+    }
   });
 });
