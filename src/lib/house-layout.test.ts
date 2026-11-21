@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { HEAT_SOURCES, LEVELS, liftedOffset, stairBetween } from './house-layout';
+import { HEAT_SOURCES, LEVELS, liftedOffset, stairBetween, radiatorsForLevel } from './house-layout';
 
 describe('Innenräume des Stadthauses', () => {
+  it('zeigt Radiatoren auf allen drei Wohnstockwerken im Radiatorenmodus', () => {
+    for (const level of [1, 2, 3]) expect(radiatorsForLevel(level, 'radiators').length).toBeGreaterThan(0);
+    expect(radiatorsForLevel(0, 'radiators')).toEqual([]);
+  });
+  it('zeigt keine Radiatoren auf allen drei Wohnstockwerken im Bodenheizungsmodus', () => {
+    for (const level of [1, 2, 3]) expect(radiatorsForLevel(level, 'underfloor')).toEqual([]);
+  });
   it('zeigt im Gasmodus einen Gasheizkessel', () => {
     expect(HEAT_SOURCES.gas.device).toBe('gas-boiler');
   });

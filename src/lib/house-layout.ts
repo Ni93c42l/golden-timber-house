@@ -5,6 +5,19 @@ export const HEATING_MODES = [
   { id: 'server', name: 'Serverrack' },
 ] as const;
 export type HeatingMode = typeof HEATING_MODES[number]['id'];
+export const HEATING_SYSTEMS = [
+  { id: 'radiators', name: 'Radiatoren' },
+  { id: 'underfloor', name: 'Bodenheizung' },
+] as const;
+export type HeatingSystem = typeof HEATING_SYSTEMS[number]['id'];
+const RADIATOR_POSITIONS = [
+  { x: -2.45, z: 4.03, angle: Math.PI },
+  { x: 4.7, z: 4.03, angle: Math.PI },
+  { x: 3, z: -3.98, angle: 0 },
+] as const;
+export function radiatorsForLevel(level: number, system: HeatingSystem) {
+  return system === 'radiators' && [1, 2, 3].includes(level) ? RADIATOR_POSITIONS : [];
+}
 export const HEAT_SOURCES = {
   gas: { device: 'gas-boiler', width: 1.35, depth: 1.25, height: 1.65 },
   'heat-pump': { device: 'heat-pump', width: 1.2, depth: 1.05, height: 1.65 },

@@ -35,3 +35,4 @@ use the editor.
 - Load CC0 furniture from local asset pointers, clone cached GLB scenes and normalize their bounds per instance; shared cached objects must never be mutated.
 - Read new 3D material colors from `--house-*` global CSS tokens; the viewer and interior share a semantic palette.
 - Keep heating variants and equipment dimensions in `src/lib/house-layout.ts`, pass the selected mode from the viewer to the interior and connect each source to the shared tank at its actual height; this preserves scale and plumbing when switching modes.
+- Keep heat distribution independent of the heat source in viewer state and derive radiator placement through `radiatorsForLevel`; one choice then applies to every residential floor without changing the basement equipment. Verify actual mounted radiators via `data-radiator-count` after `data-system-ready="<level>-<system>"`.

@@ -10,3 +10,5 @@
 - [x] Gasbetrieb, Wärmepumpe und Serverrack im Heizraum auswählbar machen.
 - [x] Serverrack mit 1 × 1 × 2 Metern und angeschlossener Warmwasserleitung darstellen.
 - [x] Alle Varianten und Auswahl auf Desktop und Handy prüfen.
+- [x] Globale Auswahl Radiatoren/Bodenheizung für die drei Wohnstockwerke ergänzen.
+- [x] Radiatoren auf allen Wohnstockwerken einblenden und bei Bodenheizung entfernen; Umschaltung prüfen.

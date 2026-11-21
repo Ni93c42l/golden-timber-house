@@ -3,10 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
-import { Building2, Layers, RotateCcw, Flame, Fan, Server } from 'lucide-react';
+import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
-import { HOUSE, LEVELS, HEATING_MODES, liftedOffset, type HeatingMode } from '@/lib/house-layout';
+import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
 // Maße in Metern
 const { width: W, depth: D, socle: SOCLE, storey: FLOOR, top: TOP, roof: ROOF } = HOUSE;
@@ -306,7 +306,7 @@ function HouseSlice({ layer, selected, colors, onSelect }: { layer: number; sele
   }}><House />{layer === 3 && <Chimney colors={colors} />}</group>;
 }
 
-function OpeningHouse({ selected, colors, onSelect, heatingMode }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void; heatingMode: HeatingMode }) {
+function OpeningHouse({ selected, colors, onSelect, heatingMode, heatingSystem }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void; heatingMode: HeatingMode; heatingSystem: HeatingSystem }) {
   const clickClosedHouse = (event: ThreeEvent<MouseEvent>) => {
     if (event.delta > 5) return;
     event.stopPropagation();
@@ -316,7 +316,7 @@ function OpeningHouse({ selected, colors, onSelect, heatingMode }: { selected: n
   if (selected === null) return <group onClick={clickClosedHouse}><House /><Chimney colors={colors} /></group>;
   return <group name="Aufgeklapptes-Haus">
     {LEVELS.filter(item => item.id !== selected || item.id === 3).map(item => <HouseSlice key={item.id} layer={item.id} selected={selected} colors={colors} onSelect={onSelect} />)}
-    <HouseInterior key={selected} level={selected} colors={colors} heatingMode={heatingMode} />
+    <HouseInterior key={selected} level={selected} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} />
   </group>;
 }
 
@@ -339,6 +339,7 @@ export default function StadthausScene() {
   const [interior, setInterior] = useState(false);
   const [level, setLevel] = useState(1);
   const [heatingMode, setHeatingMode] = useState<HeatingMode>('gas');
+  const [heatingSystem, setHeatingSystem] = useState<HeatingSystem>('radiators');
   const [reset, setReset] = useState(0);
   const [colors, setColors] = useState<InteriorPalette | null>(null);
   useEffect(() => {
@@ -357,7 +358,7 @@ export default function StadthausScene() {
           <Lightformer intensity={2} position={[0, 10, 0]} scale={[20, 20, 1]} />
           <Lightformer intensity={1} color="#cde" position={[-10, 3, 5]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
         </Environment>
-        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
+        {colors && <OpeningHouse selected={interior ? level : null} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} onSelect={selected => { setLevel(selected); setInterior(true); }} />}
         {(!interior || level > 0) && <Street />}
         <ViewCamera interior={interior} level={level} reset={reset} />
       </Canvas>
@@ -377,6 +378,15 @@ export default function StadthausScene() {
             {HEATING_MODES.map(mode => {
               const Icon = mode.id === 'gas' ? Flame : mode.id === 'heat-pump' ? Fan : Server;
               return <Button key={mode.id} size="sm" variant={heatingMode === mode.id ? 'default' : 'ghost'} aria-pressed={heatingMode === mode.id} onClick={() => setHeatingMode(mode.id)}><Icon />{mode.name}</Button>;
+            })}
+          </div>
+        </div>}
+        {interior && <div className="flex w-full flex-wrap items-center gap-2 border-t border-border pt-2">
+          <h3 className="text-xs font-semibold">Heizsystem</h3>
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Heizsystem">
+            {HEATING_SYSTEMS.map(system => {
+              const Icon = system.id === 'radiators' ? Heater : Grid2X2;
+              return <Button key={system.id} size="sm" variant={heatingSystem === system.id ? 'default' : 'ghost'} aria-pressed={heatingSystem === system.id} onClick={() => setHeatingSystem(system.id)}><Icon />{system.name}</Button>;
             })}
           </div>
         </div>}

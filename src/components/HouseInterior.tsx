@@ -1,8 +1,8 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { HEAT_SOURCES, LEVELS, stairBetween, type HeatingMode } from '@/lib/house-layout';
+import { HEAT_SOURCES, LEVELS, stairBetween, radiatorsForLevel, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
 export type InteriorPalette = Record<'wall' | 'wood' | 'seam' | 'tile' | 'grout' | 'rug' | 'metal' | 'brick' | 'cap', string>;
 type V3 = [number, number, number];
@@ -220,7 +220,52 @@ function FurnishedRooms({ level, colors }: { level: number; colors: InteriorPale
     {(level === 1 || level === 2) && <Solid p={[-3.65, 0.012, 2.1]} s={[3.9, 0.02, 2.9]} color={colors.rug} />}
   </group>;
 }
-export default function HouseInterior({ level, colors, heatingMode }: { level: number; colors: InteriorPalette; heatingMode: HeatingMode }) {
+function Radiator({ colors }: { colors: InteriorPalette }) {
+  const fins = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = fins.current;
+    if (!mesh) return;
+    const matrix = new THREE.Matrix4();
+    for (let i = 0; i < 14; i++) {
+      matrix.makeTranslation(-0.585 + i * 0.09, 0.54, 0);
+      mesh.setMatrixAt(i, matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }, []);
+  return <group name="Radiator">
+    <instancedMesh ref={fins} args={[undefined, undefined, 14]} castShadow receiveShadow>
+      <boxGeometry args={[0.065, 0.68, 0.18]} /><meshStandardMaterial color={colors.grout} metalness={0.25} roughness={0.4} />
+    </instancedMesh>
+    {[0.25, 0.83].map(y => <HeatingPipe key={y} from={[-0.66, y, 0]} to={[0.66, y, 0]} radius={0.045} color={colors.grout} />)}
+    {[-0.66, 0.66].map(x => <HeatingPipe key={x} from={[x, 0.03, 0]} to={[x, 0.3, 0]} radius={0.025} color={colors.cap} />)}
+    <HeatingPipe from={[0.63, 0.82, 0]} to={[0.8, 0.82, 0]} radius={0.04} color={colors.cap} />
+    <mesh position={[0.82, 0.82, 0]} rotation-z={Math.PI / 2}>
+      <cylinderGeometry args={[0.06, 0.06, 0.13, 16]} /><meshStandardMaterial color={colors.grout} />
+    </mesh>
+  </group>;
+}
+function RoomHeating({ level, system, colors }: { level: number; system: HeatingSystem; colors: InteriorPalette }) {
+  const root = useRef<THREE.Group>(null);
+  const invalidate = useThree(state => state.invalidate);
+  const positions = radiatorsForLevel(level, system);
+  useEffect(() => { invalidate(); }, [level, system, invalidate]);
+  useFrame(() => {
+    const wrapper = document.querySelector('[data-house-view]');
+    let count = 0;
+    root.current?.traverse(node => { if (node.name === 'Radiator') count++; });
+    wrapper?.setAttribute('data-radiator-count', String(count));
+    wrapper?.setAttribute('data-system-ready', `${level}-${system}`);
+  });
+  useEffect(() => () => {
+    const wrapper = document.querySelector('[data-house-view]');
+    wrapper?.removeAttribute('data-radiator-count');
+    wrapper?.removeAttribute('data-system-ready');
+  }, [level, system]);
+  return <group ref={root} name={`Heizsystem-${system}`}>
+    {positions.map((p, i) => <group key={i} position={[p.x, 0, p.z]} rotation-y={p.angle}><Radiator colors={colors} /></group>)}
+  </group>;
+}
+export default function HouseInterior({ level, colors, heatingMode, heatingSystem }: { level: number; colors: InteriorPalette; heatingMode: HeatingMode; heatingSystem: HeatingSystem }) {
   const wood = useFloorTexture(colors, false), tile = useFloorTexture(colors, true);
   const y = LEVELS.find(item => item.id === level)?.y ?? 1.3;
   const floorMap = level === 0 ? tile : wood;
@@ -249,6 +294,7 @@ export default function HouseInterior({ level, colors, heatingMode }: { level: n
       <boxGeometry args={[12.1, 0.14, 0.18]} /><meshStandardMaterial color={colors.wood} />
     </mesh>)}
     {level === 0 && <HeatingRoom colors={colors} mode={heatingMode} />}
+    <RoomHeating level={level} system={heatingSystem} colors={colors} />
     <Suspense fallback={null}><FurnishedRooms level={level} colors={colors} /></Suspense>
   </group>;
 }
