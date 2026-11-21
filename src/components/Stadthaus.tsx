@@ -139,21 +139,31 @@ function Roof() {
 
 // Gauben: aussen klein mit Bogen, Mitte gross mit Dreiecksgiebel
 function Dormer({ x, big }: { x: number; big?: boolean }) {
-  const z = FZ - 1.1, yBase = TOP + 0.35 + ROOF * (1 - z / (D / 2));
-  const w = big ? 1.4 : 0.85, h = big ? 1.2 : 0.75, dep = 1.1;
+  const z = FZ - 0.7, yBase = TOP + 0.35 + ROOF * (1 - z / (D / 2));
+  const w = big ? 1.4 : 0.85, h = big ? 1.2 : 0.75, dep = 1.9;
   const cap = useMemo(() => {
     const sh = new THREE.Shape();
     if (big) { sh.moveTo(-w / 2 - 0.12, 0); sh.lineTo(w / 2 + 0.12, 0); sh.lineTo(0, 0.6); sh.closePath(); }
     else { const rr = w / 2 + 0.08; sh.moveTo(rr, 0); sh.absarc(0, 0, rr, 0, Math.PI, false); sh.closePath(); }
     return new THREE.ExtrudeGeometry(sh, { depth: dep + 0.1, bevelEnabled: false });
   }, [big, w]);
+  // Keil: verbindet die Gaube mit dem Dach, damit sie nicht schwebt
+  const wedge = useMemo(() => {
+    const h2 = w / 2 + 0.14, dz = FZ - z + 0.1;
+    const sh = new THREE.Shape();
+    sh.moveTo(-h2, 0); sh.lineTo(h2, 0); sh.lineTo(0, dz); sh.closePath();
+    return new THREE.ExtrudeGeometry(sh, { depth: yBase - 0.2, bevelEnabled: false });
+  }, [w, z, yBase]);
   return (
     <group position={[x, yBase, z]}>
-      <Box p={[0, h / 2 - 0.2, -dep / 2 + 0.2]} s={[w, h, dep]} c={C.ochre} />
-      <Box p={[0, h / 2 - 0.15, 0.71]} s={[w - 0.3, h - 0.25, 0.04]} c={C.glass} r={0.2} />
-      <Box p={[0, h / 2 - 0.15, 0.73]} s={[0.04, h - 0.25, 0.03]} c={C.frame} />
+      <Box p={[0, h / 2 - 0.2, -dep / 2 + 0.05]} s={[w, h, dep]} c={C.ochre} />
+      <Box p={[0, h / 2 - 0.15, 0.07]} s={[w - 0.3, h - 0.25, 0.04]} c={C.glass} r={0.2} />
+      <Box p={[0, h / 2 - 0.15, 0.09]} s={[0.04, h - 0.25, 0.03]} c={C.frame} />
       <mesh geometry={cap} position={[0, h - 0.2, -dep + 0.2]} castShadow>
         <meshStandardMaterial color={big ? C.roof : C.ochre} roughness={0.7} />
+      </mesh>
+      <mesh geometry={wedge} position={[0, 0.05 - yBase, FZ - z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <meshStandardMaterial color={C.roof} roughness={0.85} />
       </mesh>
     </group>
   );
