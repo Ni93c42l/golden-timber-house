@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FachwerkhausRouteImport } from './routes/fachwerkhaus'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FachwerkhausRoute = FachwerkhausRouteImport.update({
+  id: '/fachwerkhaus',
+  path: '/fachwerkhaus',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/fachwerkhaus': typeof FachwerkhausRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/fachwerkhaus': typeof FachwerkhausRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/fachwerkhaus': typeof FachwerkhausRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/fachwerkhaus'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/fachwerkhaus'
+  id: '__root__' | '/' | '/fachwerkhaus'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FachwerkhausRoute: typeof FachwerkhausRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fachwerkhaus': {
+      id: '/fachwerkhaus'
+      path: '/fachwerkhaus'
+      fullPath: '/fachwerkhaus'
+      preLoaderRoute: typeof FachwerkhausRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FachwerkhausRoute: FachwerkhausRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

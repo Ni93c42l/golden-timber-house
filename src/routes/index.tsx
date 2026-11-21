@@ -1,17 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import HouseScene from "@/components/House";
+import StadthausScene from "@/components/Stadthaus";
 
 export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Gelbes Fachwerkhaus 3D" },
-      { name: "description", content: "Dreistöckiges gelbes Fachwerkhaus, 12 m hoch, in 3D." },
-      { property: "og:title", content: "Gelbes Fachwerkhaus 3D" },
-      { property: "og:description", content: "Dreistöckiges gelbes Fachwerkhaus, 12 m hoch, in 3D." },
+      { title: "Stadthaus 3D – weiss mit Ocker-Läden" },
+      { name: "description", content: "3D-Modell eines klassizistischen Stadthauses mit Ocker-Fensterläden und Gauben." },
+      { property: "og:title", content: "Stadthaus 3D – weiss mit Ocker-Läden" },
+      { property: "og:description", content: "3D-Modell eines klassizistischen Stadthauses mit Ocker-Fensterläden und Gauben." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: HouseScene,
+  component: StadthausScene,
 });
