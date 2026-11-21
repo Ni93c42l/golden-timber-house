@@ -33,7 +33,25 @@ export function stairBetween(lower: number) {
   const bottom = LEVELS.find(level => level.id === lower);
   const top = LEVELS.find(level => level.id === lower + 1);
   if (!bottom || !top) return null;
-  return { from: bottom.y, to: top.y, rise: top.y - bottom.y, steps: 18, run: 4, width: 1.4 };
+  return { from: bottom.y, to: top.y, rise: top.y - bottom.y, steps: 18, run: 3.4, width: 0.9, x: -0.5, startZ: 0.4, endZ: -3 };
+}
+
+// A continuous right-hand passage bypasses the stacked stair flights.
+export const CIRCULATION = {
+  stairLeft: -0.95, stairRight: -0.05, front: 0.4, back: -3,
+  landingBack: -4.2, corridorLeft: -0.92, corridorRight: 0.92,
+  doorWidth: 1.1, doors: [2.2, -3.65],
+  wallSegments: [{ z: 3.55, length: 1.6 }, { z: -0.75, length: 4.8 }, { z: -4.25, length: 0.2 }],
+} as const;
+export const FLOOR_PLATES = [
+  { x: -3.625, z: 0, width: 5.25, depth: 9 },
+  { x: 3.625, z: 0, width: 5.25, depth: 9 },
+  { x: 0, z: 2.45, width: 2, depth: 4.1 },
+  { x: 0, z: -3.75, width: 2, depth: 1.5 },
+  { x: 0.475, z: -1.3, width: 1.05, depth: 3.4 },
+] as const;
+export function facadeOpacity(facing: number) {
+  return facing > 0 ? 0.12 : 1;
 }
 
 export function liftedOffset(layer: number, selected: number | null) {

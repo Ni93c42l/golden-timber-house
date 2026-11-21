@@ -32,6 +32,8 @@ use the editor.
 ## House viewer
 - Keep storey dimensions and stair connectivity in `src/lib/house-layout.ts`; a shared layout makes interior geometry and tests agree.
 - Open storeys by clicking the house: vertically clip the unchanged facade into animated slices and lift all upper layers by the same offset, creating a single gap; keep the selected furnished cutaway at its original elevation.
+- Retain a stationary clipped copy of the selected facade with view-facing surfaces translucent and opposite surfaces opaque; material changes apply only to this copy so the closed exterior remains unchanged.
+- Use shared circulation and floor-plate geometry with a side passage, rear landing and room openings outside the stair run; stacked flights must never obstruct the route from an arrival landing to rooms.
 - Load CC0 furniture from local asset pointers, clone cached GLB scenes and normalize their bounds per instance; shared cached objects must never be mutated.
 - Read new 3D material colors from `--house-*` global CSS tokens; the viewer and interior share a semantic palette.
 - Keep heating variants and equipment dimensions in `src/lib/house-layout.ts`, pass the selected mode from the viewer to the interior and connect each source to the shared tank at its actual height; this preserves scale and plumbing when switching modes.

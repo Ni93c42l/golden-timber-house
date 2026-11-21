@@ -12,3 +12,5 @@
 - [x] Alle Varianten und Auswahl auf Desktop und Handy prüfen.
 - [x] Globale Auswahl Radiatoren/Bodenheizung für die drei Wohnstockwerke ergänzen.
 - [x] Radiatoren auf allen Wohnstockwerken einblenden und bei Bodenheizung entfernen; Umschaltung prüfen.
+- [x] Treppenpodeste, freien Flur und Zugänge zu allen Räumen korrigieren, Möbel und Heizungen erhalten.
+- [x] Ausgewählte Originalfassade blickabhängig durchsichtig erhalten; Aussenansicht und Umschaltung prüfen.

@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
-import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
+import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, facadeOpacity, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
 // Maße in Metern
 const { width: W, depth: D, socle: SOCLE, storey: FLOOR, top: TOP, roof: ROOF } = HOUSE;
@@ -271,22 +271,35 @@ function Street() {
   );
 }
 
-function HouseSlice({ layer, selected, colors, onSelect }: { layer: number; selected: number; colors: InteriorPalette; onSelect: (level: number) => void }) {
+function HouseSlice({ layer, selected, colors, onSelect, ghost = false }: { layer: number; selected: number; colors: InteriorPalette; onSelect: (level: number) => void; ghost?: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const invalidate = useThree(state => state.invalidate);
   const lower = (LEVELS.find(item => item.id === layer)?.y ?? -2) + 0.015;
   const upper = (LEVELS.find(item => item.id === layer + 1)?.y ?? 40) - 0.015;
   const planes = useMemo(() => [new THREE.Plane(new THREE.Vector3(0, 1, 0), -lower), new THREE.Plane(new THREE.Vector3(0, -1, 0), upper)], [lower, upper]);
-  const target = liftedOffset(layer, selected);
+  const target = ghost ? 0 : liftedOffset(layer, selected);
   useLayoutEffect(() => {
     ref.current?.traverse(node => {
       if (node instanceof THREE.Mesh) {
         const materials = Array.isArray(node.material) ? node.material : [node.material];
-        materials.forEach(material => { material.clippingPlanes = planes; material.clipShadows = true; material.needsUpdate = true; });
+        materials.forEach(material => {
+          material.clippingPlanes = planes; material.clipShadows = true;
+          if (ghost) {
+            material.transparent = true; material.depthWrite = false; material.side = THREE.DoubleSide;
+            material.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
+              shader.uniforms['nearOpacity'] = { value: facadeOpacity(1) };
+              shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 facadePosition;\nvarying vec3 facadeNormal;').replace('#include <begin_vertex>', '#include <begin_vertex>\nfacadePosition = (modelMatrix * vec4(position, 1.0)).xyz;\nfacadeNormal = normalize(mat3(modelMatrix) * normal);');
+              shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 facadePosition;\nvarying vec3 facadeNormal;\nuniform float nearOpacity;').replace('#include <opaque_fragment>', `vec3 wallNormal = abs(facadePosition.x) / 6.25 > abs(facadePosition.z) / 4.5 ? vec3(sign(facadePosition.x), 0.0, 0.0) : vec3(0.0, 0.0, sign(facadePosition.z));\nfloat facing = dot(wallNormal, normalize(cameraPosition - facadePosition));\ndiffuseColor.a *= facing > 0.0 ? nearOpacity : 1.0;\n${layer < 3 ? 'if (abs(facadeNormal.y) > 0.9) discard;' : 'if (abs(facadePosition.x) < 6.0) diffuseColor.a = 0.04;'}\n#include <opaque_fragment>`);
+            };
+            material.customProgramCacheKey = () => `selected-facade-${layer}`;
+            node.castShadow = false;
+          }
+          material.needsUpdate = true;
+        });
       }
     });
     invalidate();
-  }, [planes, invalidate]);
+  }, [planes, invalidate, ghost, layer]);
   useFrame((_, delta) => {
     const group = ref.current;
     if (!group) return;
@@ -296,14 +309,15 @@ function HouseSlice({ layer, selected, colors, onSelect }: { layer: number; sele
     planes[0]?.set(new THREE.Vector3(0, 1, 0), -lower - group.position.y);
     planes[1]?.set(new THREE.Vector3(0, -1, 0), upper + group.position.y);
     group.userData['lift'] = group.position.y;
+    if (ghost) document.querySelector('[data-house-view]')?.setAttribute('data-facade-ready', String(layer));
     if (group.position.y !== target) invalidate();
   });
-  return <group ref={ref} name={`Haus-Stockwerk-${layer}`} onClick={event => {
+  return <group ref={ref} name={ghost ? `Durchsichtige-Fassade-${layer}` : `Haus-Stockwerk-${layer}`} onClick={event => {
     if (event.delta > 5) return;
     const localY = event.point.y - (ref.current?.position.y ?? 0);
     if (localY < lower || localY > upper) return;
     event.stopPropagation(); onSelect(layer);
-  }}><House />{layer === 3 && <Chimney colors={colors} />}</group>;
+  }}><House />{layer === 3 && !ghost && <Chimney colors={colors} />}</group>;
 }
 
 function OpeningHouse({ selected, colors, onSelect, heatingMode, heatingSystem }: { selected: number | null; colors: InteriorPalette; onSelect: (level: number) => void; heatingMode: HeatingMode; heatingSystem: HeatingSystem }) {
@@ -316,6 +330,7 @@ function OpeningHouse({ selected, colors, onSelect, heatingMode, heatingSystem }
   if (selected === null) return <group onClick={clickClosedHouse}><House /><Chimney colors={colors} /></group>;
   return <group name="Aufgeklapptes-Haus">
     {LEVELS.filter(item => item.id !== selected || item.id === 3).map(item => <HouseSlice key={item.id} layer={item.id} selected={selected} colors={colors} onSelect={onSelect} />)}
+    <HouseSlice key={`facade-${selected}`} layer={selected} selected={selected} colors={colors} onSelect={onSelect} ghost />
     <HouseInterior key={selected} level={selected} colors={colors} heatingMode={heatingMode} heatingSystem={heatingSystem} />
   </group>;
 }

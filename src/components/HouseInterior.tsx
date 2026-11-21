@@ -2,7 +2,7 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { HEAT_SOURCES, LEVELS, stairBetween, radiatorsForLevel, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
+import { HEAT_SOURCES, LEVELS, CIRCULATION, FLOOR_PLATES, stairBetween, radiatorsForLevel, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
 export type InteriorPalette = Record<'wall' | 'wood' | 'seam' | 'tile' | 'grout' | 'rug' | 'metal' | 'brick' | 'cap', string>;
 type V3 = [number, number, number];
@@ -62,16 +62,16 @@ function Staircase({ level, colors }: { level: number; colors: InteriorPalette }
   const stair = stairBetween(level);
   if (!stair) return null;
   const stepH = stair.rise / stair.steps, stepD = stair.run / stair.steps;
-  return <group name={`Treppe-${level}-${level + 1}`}>
+  return <group name={`Treppe-${level}-${level + 1}`} position-x={stair.x}>
     {Array.from({ length: stair.steps }, (_, i) => {
-      const z = 0.4 - (i + 0.5) * stepD, y = (i + 1) * stepH;
+      const z = stair.startZ - (i + 0.5) * stepD, y = (i + 1) * stepH;
       return <group key={i}>
         <Solid p={[0, y - 0.045, z]} s={[stair.width, 0.09, stepD + 0.03]} color={colors.wood} />
         <Solid p={[0, y - stepH / 2, z + stepD / 2]} s={[stair.width, stepH, 0.04]} color={colors.seam} />
-        {i % 3 === 0 && [-1, 1].map(sign => <Solid key={sign} p={[sign * 0.76, y + 0.43, z]} s={[0.045, 0.86, 0.045]} color={colors.metal} />)}
+        {i % 3 === 0 && [-1, 1].map(sign => <Solid key={sign} p={[sign * (stair.width / 2), y + 0.43, z]} s={[0.045, 0.86, 0.045]} color={colors.metal} />)}
       </group>;
     })}
-    {[-1, 1].map(sign => <mesh key={sign} position={[sign * 0.76, stair.rise / 2 + 0.88, -1.6]} rotation-x={Math.atan2(stair.rise, stair.run)} castShadow>
+    {[-1, 1].map(sign => <mesh key={sign} position={[sign * (stair.width / 2), stair.rise / 2 + 0.88, (stair.startZ + stair.endZ) / 2]} rotation-x={Math.atan2(stair.rise, stair.run)} castShadow>
       <boxGeometry args={[0.07, 0.07, Math.hypot(stair.rise, stair.run)]} /><meshStandardMaterial color={colors.wood} />
     </mesh>)}
   </group>;
@@ -270,26 +270,22 @@ export default function HouseInterior({ level, colors, heatingMode, heatingSyste
   const y = LEVELS.find(item => item.id === level)?.y ?? 1.3;
   const floorMap = level === 0 ? tile : wood;
   return <group position={[0, y, 0]} name="Innenräume">
-    {/* Vier Platten lassen den Treppenschacht tatsächlich offen. */}
-    <Solid p={[-3.625, -0.09, 0]} s={[5.25, 0.18, 9]} color={colors.wall} map={floorMap} />
-    <Solid p={[3.625, -0.09, 0]} s={[5.25, 0.18, 9]} color={colors.wall} map={floorMap} />
-    <Solid p={[0, -0.09, 2.5]} s={[2, 0.18, 4]} color={colors.wall} map={floorMap} />
-    <Solid p={[0, -0.09, -4.05]} s={[2, 0.18, 0.9]} color={colors.wall} map={floorMap} />
+    {/* Podeste und Seitenflur bleiben neben dem offenen Treppenschacht begehbar. */}
+    {FLOOR_PLATES.map((p, i) => <Solid key={i} p={[p.x, -0.09, p.z]} s={[p.width, 0.18, p.depth]} color={colors.wall} map={floorMap} />)}
     {level > 0 && <Solid p={[3.6, 0.005, -2.3]} s={[5, 0.015, 4.2]} color={colors.wall} map={tile} />}
     {/* Niedrige Schnittkanten statt verdeckender Vorderwände. */}
     {[-1, 1].map(sign => <group key={sign}>
       <Solid p={[sign * 6.1, 0.45, 0]} s={[0.3, 0.9, 9]} color={colors.wall} />
       <Solid p={[sign * 3.6, 0.45, -0.2]} s={[5, 0.9, 0.16]} color={colors.wall} />
       {/* Türen zum Flur: echte Lücken in den Trennwänden. */}
-      {[[3.6, 1.6], [1.4, 0.8], [-0.65, 0.8], [-3.25, 2.5]].map(([z, length], i) => z !== undefined && length !== undefined &&
-        <Solid key={i} p={[sign, 0.45, z]} s={[0.16, 0.9, length]} color={colors.wall} />)}
+      {CIRCULATION.wallSegments.map((p, i) => <Solid key={i} p={[sign, 0.45, p.z]} s={[0.16, 0.9, p.length]} color={colors.wall} />)}
     </group>)}
-    <Solid p={[0, 0.65, -4.35]} s={[12.5, 1.3, 0.3]} color={colors.wall} />
+    {level === 1 ? [-1, 1].map(sign => <Solid key={sign} p={[sign * 3.4, 0.65, -4.35]} s={[5.7, 1.3, 0.3]} color={colors.wall} />) : <Solid p={[0, 0.65, -4.35]} s={[12.5, 1.3, 0.3]} color={colors.wall} />}
     <Solid p={[0, 0.12, 4.35]} s={[12.5, 0.24, 0.3]} color={colors.wall} />
-    {level === 0 && <Solid p={[0, -0.09, -1.6]} s={[2, 0.18, 4]} color={colors.wall} map={tile} />}
+    {level === 0 && <Solid p={[-0.525, -0.09, -1.3]} s={[0.95, 0.18, 3.4]} color={colors.wall} map={floorMap} />}
     <Staircase level={level} colors={colors} />
     {level > 0 && <group position={[0, (LEVELS.find(item => item.id === level - 1)?.y ?? y) - y, 0]}><Staircase level={level - 1} colors={colors} /></group>}
-    {level > 0 && [-1, 1].map(sign => <Solid key={sign} p={[sign * 0.8, 0.45, -1.6]} s={[0.045, 0.9, 4]} color={colors.metal} />)}
+    {level > 0 && <Solid p={[-0.05, 0.45, -1.3]} s={[0.045, 0.9, 3.4]} color={colors.metal} />}
     {level === 3 && [-2.8, 2.8].map(z => <mesh key={z} position={[0, 1.6, z]} rotation-x={z < 0 ? 0.67 : -0.67}>
       <boxGeometry args={[12.1, 0.14, 0.18]} /><meshStandardMaterial color={colors.wood} />
     </mesh>)}

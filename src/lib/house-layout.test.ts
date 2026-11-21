@@ -1,7 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { HEAT_SOURCES, LEVELS, liftedOffset, stairBetween, radiatorsForLevel } from './house-layout';
+import { HEAT_SOURCES, LEVELS, CIRCULATION, FLOOR_PLATES, liftedOffset, stairBetween, radiatorsForLevel, facadeOpacity } from './house-layout';
 
 describe('Innenräume des Stadthauses', () => {
+  it('führt vom oberen Treppenpodest über begehbare Böden zu allen vier Raumzugängen', () => {
+    const walkable = (x: number, z: number) => {
+      const onFloor = FLOOR_PLATES.some(p => x >= p.x - p.width / 2 && x <= p.x + p.width / 2 && z >= p.z - p.depth / 2 && z <= p.z + p.depth / 2);
+      const inStair = x > CIRCULATION.stairLeft - 0.15 && x < CIRCULATION.stairRight + 0.15 && z > CIRCULATION.back - 0.15 && z < CIRCULATION.front + 0.15;
+      const inWall = Math.abs(Math.abs(x) - 1) < 0.23 && CIRCULATION.wallSegments.some(p => Math.abs(z - p.z) < p.length / 2 + 0.15);
+      return onFloor && !inStair && !inWall && Math.abs(x) < 1.65 && z > -4.15 && z < 4.15;
+    };
+    for (const level of [1, 2, 3]) {
+      const incoming = stairBetween(level - 1);
+      expect(incoming?.endZ).toBe(-3);
+      const queue: [number, number][] = [[-5, -36]];
+      const seen = new Set(['-5,-36']);
+      for (let i = 0; i < queue.length; i++) {
+        const point = queue[i];
+        if (!point) continue;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          if (dx === undefined || dz === undefined) continue;
+          const x = point[0] + dx, z = point[1] + dz, key = `${x},${z}`;
+          if (!seen.has(key) && walkable(x / 10, z / 10)) { seen.add(key); queue.push([x, z]); }
+        }
+      }
+      for (const x of [-14, 14]) for (const z of [-36, 22]) expect(seen.has(`${x},${z}`)).toBe(true);
+    }
+  });
+  it('lässt am Treppenende ein Podest und einen freien Seitenflur', () => {
+    for (const lower of [0, 1, 2]) {
+      const stair = stairBetween(lower);
+      expect(stair?.endZ).toBe(CIRCULATION.back);
+      expect(CIRCULATION.back - CIRCULATION.landingBack).toBeGreaterThanOrEqual(1.1);
+      expect(CIRCULATION.corridorRight - CIRCULATION.stairRight).toBeGreaterThanOrEqual(0.9);
+    }
+  });
+  it('erhält die blickseitige Fassade durchsichtig und die gegenüberliegende undurchsichtig', () => {
+    expect(facadeOpacity(1)).toBeGreaterThan(0);
+    expect(facadeOpacity(1)).toBeLessThan(0.2);
+    expect(facadeOpacity(-1)).toBe(1);
+  });
   it('zeigt Radiatoren auf allen drei Wohnstockwerken im Radiatorenmodus', () => {
     for (const level of [1, 2, 3]) expect(radiatorsForLevel(level, 'radiators').length).toBeGreaterThan(0);
     expect(radiatorsForLevel(0, 'radiators')).toEqual([]);
