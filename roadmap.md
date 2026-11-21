@@ -14,3 +14,4 @@
 - [x] Radiatoren auf allen Wohnstockwerken einblenden und bei Bodenheizung entfernen; Umschaltung prüfen.
 - [x] Treppenpodeste, freien Flur und Zugänge zu allen Räumen korrigieren, Möbel und Heizungen erhalten.
 - [x] Ausgewählte Originalfassade blickabhängig durchsichtig erhalten; Aussenansicht und Umschaltung prüfen.
+- [x] Hausalter (0–2026, ganze Jahre), Verglasung und Bewohnerzahl ohne Einfluss auf die Hausdarstellung ergänzen und prüfen.

@@ -5,6 +5,7 @@ import { OrbitControls, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import { Building2, Layers, RotateCcw, Flame, Fan, Server, Heater, Grid2X2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import HouseDetails from '@/components/HouseDetails';
 import HouseInterior, { Chimney, type InteriorPalette } from '@/components/HouseInterior';
 import { HOUSE, LEVELS, HEATING_MODES, HEATING_SYSTEMS, liftedOffset, facadeOpacity, type HeatingMode, type HeatingSystem } from '@/lib/house-layout';
 
@@ -405,6 +406,10 @@ export default function StadthausScene() {
             })}
           </div>
         </div>}
+        <details open={!interior} className="w-full border-t border-border pt-2">
+          <summary className="cursor-pointer text-xs font-semibold">Hausangaben</summary>
+          <div className="mt-2"><HouseDetails exterior={!interior} /></div>
+        </details>
       </header>
       {interior && <div className="pointer-events-none absolute inset-x-3 bottom-4 rounded-md border border-border bg-card/95 px-4 py-3 text-card-foreground sm:inset-x-auto sm:left-4 sm:max-w-lg">
         <h2 className="mb-1 text-sm font-semibold">{current.name}</h2>

@@ -38,3 +38,4 @@ use the editor.
 - Read new 3D material colors from `--house-*` global CSS tokens; the viewer and interior share a semantic palette.
 - Keep heating variants and equipment dimensions in `src/lib/house-layout.ts`, pass the selected mode from the viewer to the interior and connect each source to the shared tank at its actual height; this preserves scale and plumbing when switching modes.
 - Keep heat distribution independent of the heat source in viewer state and derive radiator placement through `radiatorsForLevel`; one choice then applies to every residential floor without changing the basement equipment. Verify actual mounted radiators via `data-radiator-count` after `data-system-ready="<level>-<system>"`.
+- Keep descriptive house inputs in `HouseDetails` state, separate from Canvas props; age, glazing and residents are informational and must not alter or rerender the 3D scene.
